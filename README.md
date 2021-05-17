@@ -1,2 +1,2 @@
 # Object_language
-A language that interpretes and generates objects on a minigame
+A language that interpretes an input text and generates objects on a minigame
