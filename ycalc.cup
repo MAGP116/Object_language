@@ -1,0 +1,300 @@
+
+import java_cup.runtime.*;
+import Code.CodeSystem;
+import Code.CodeNode;
+import Code.SymbolTable;
+   
+action code {:
+
+ 
+:}
+parser code {:
+
+   
+
+    public void report_error(String message, Object info) {
+   
+        StringBuilder m = new StringBuilder("Error");
+   
+         if (info instanceof java_cup.runtime.Symbol) {
+            
+            java_cup.runtime.Symbol s = ((java_cup.runtime.Symbol) info);
+   
+             if (s.left >= 0) {                
+                  m.append(" in line "+(s.left+1));   
+               	 
+               	  if (s.right >= 0)                    
+                 	 m.append(", column "+(s.right+1));
+            }
+        }
+   
+        m.append(" : "+message);
+   
+        System.err.println(m);
+    }
+   
+    
+    public void report_fatal_error(String message, Object info) {
+        report_error(message, info);
+    }
+:};
+   
+
+   
+/* ------------Declaration of Terminals and Non Terminals Section----------- */
+   
+
+terminal            FUNCION, RETURN,ENDARGS, ENDFUNCION,  CREAR, ENDCREAR,BORRAR,REALIZAR,COMMA, ENDREALIZAR,ASIGNACION,IF,THEN,
+                ENDIF,ELSE,BUSCAR,MI,POSICION,DIRECCION,X, Y,
+                VELOCIDAD,ACELERACION,ENDTRIGGER,OR,AND,NOT,IGUALDAD,MAYORIGUAL,SUMA,RESTA,MULTIPLICACION,DIVISION,
+                PARAP,PARCIE;
+terminal String     ID, TIPO,TIPOOBJETO,ENTERO, FLOTANTE, BOOL,TIPOTRIGGER;
+
+non terminal SymbolTable Inicio;
+non terminal CodeNode   Bloque, Decl, Args, Seque, Buscar, Contenedor, Funcion, funcArgs, funcArgsT, Objeto, ObjDecls,
+                        ObjAtribs,ObjAtribsT, ObjAtrib, ObjVars, ObjVar,ObjTriggers, ObjTrigger, OrOp,
+                        AndOp, NotOp, CompOp, SumOp, MulOp,UnaOp, DataOp, Num;
+non terminal String     Pos, Dir, Cord, Vel, Acel;
+  
+
+/* -------------Precedence and Associatively of Terminals Section----------- */
+      
+
+
+/* ----------------------------Grammar Section-------------------- */
+   
+/*----------------------------------------------   
+Inicio ::= Bloque;
+Bloque ::=	Decl Bloque
+	| 	Seque Bloque
+	| 	;
+Decl  	::=   TIPO ID
+    | 	TIPO FUNCION ID Args ENDARGS Bloque ENDFUNCION;
+Args    ::= Args TIPO ID
+    |   ;
+Seque ::= CREAR Objeto ENDCREAR
+	|	 BORRAR Buscar
+	| 	Funcion
+	|   RETURN OrOp
+	| 	Contenedor ASIGNACION OrOp
+	| 	IF OrOp THEN Bloque ENDIF
+	| 	IF OrOp THEN Bloque ELSE Bloque ENDIF;
+
+Buscar ::= BUSCAR TIPOOBJETO Num;
+Contenedor ::= ID
+    | 	MI ObjAtrib
+    | 	MI ID;
+Funcion ::= REALIZAR ID funcArgs ENDREALIZAR;
+funcArgs ::= OrOp funcArgsT
+    |   ;
+funcArgsT ::= COMMA OrOp funcArgsT
+    |   ;
+
+Objeto      ::= TIPOOBJETO ObjDecls;
+ObjDecls    ::= ObjAtribs ObjVars ObjTriggers;
+ObjAtribs   ::= ObjAtrib OrOp ObjAtribsT
+    |	;
+ObjAtribsT  ::= COMMA ObjAtrib OrOp ObjAtribsT
+    |   ;
+ObjAtrib ::= Pos
+    | 	Dir
+    | 	Vel
+    | 	Acel;
+Pos ::= POSICION Cord;
+Dir ::= DIRECCION Cord;
+Cord ::= X
+    | 	Y ;
+Vel ::= VELOCIDAD ;
+Acel ::= ACELERACION ;
+ObjVars ::= ObjVar ObjVars
+    |	;
+ObjVar ::= MI TIPO ID;
+ObjTriggers ::= ObjTrigger ObjTriggers
+|	;
+ObjTrigger ::= TIPOTRIGGER Bloque ENDTRIGGER;
+
+
+OrOp ::= OrOp OR AndOp
+	| 	AndOp;
+AndOp ::= AndOp AND NotOp
+	| 	NotOp;
+NotOp ::= NOT CompOp
+    |	CompOp;
+CompOp ::= SumOp IGUALDAD SumOp
+	|	SumOp MAYORIGUAL SumOp
+	|	SumOp;
+SumOp ::= SumOp SUMA MulOp
+	|	SumOp RESTA MulOp
+	|	MulOp;
+MulOp ::=	MulOp MULTIPLICACION UnaOp
+	|	MulOp DIVISION UnaOp
+	|	UnaOp;
+UnaOp ::=	RESTA DataOp
+	|	DataOp;
+DataOp ::=
+        PARAP OrOp PARCIE
+	|	Contenedor
+	|   Funcion
+	|	Num;
+Num ::=
+		ENTERO
+	|	FLOTANTE
+	|	BOOL;
+
+
+                 
+----------------------------------------------------*/
+Inicio ::= Bloque:b{:
+    SymbolTable symbolTable = new SymbolTable();
+    b.run(symbolTable);
+    RESULT = symbolTable;:};
+Bloque ::=	Decl:d Bloque:b {:RESULT = new CodeSystem.CodeNodeBlock(d,b);:}
+	| 	Seque:s Bloque:b{:RESULT = new CodeSystem.CodeNodeBlock(s,b);:}
+	| 	{:RESULT = new CodeSystem.CodeNodeEmpty();:};
+Decl  	::=   TIPO:t ID:i{:RESULT = new CodeSystem.CodeNodeDecls(t,i);:}
+    | 	TIPO:t FUNCION ID:i Args:a ENDARGS Bloque:b ENDFUNCION{:RESULT = new CodeSystem.CodeNodeDecls("function",i,a,b,t);:};
+Args    ::= Args:a TIPO:t ID:i{:RESULT = new CodeSystem.CodeNodeBlock(a,new CodeSystem.CodeNodeDecls(t,i));:}
+    |   {:RESULT = new CodeSystem.CodeNodeEmpty();:};
+Seque ::= CREAR Objeto:o ENDCREAR{:RESULT = o;:}
+	|	 BORRAR Buscar{:RESULT = new CodeSystem.CodeNodeEmpty();//TODO---------------:}
+	| 	Funcion:f{:RESULT = f;:}
+	|   RETURN OrOp:o{:RESULT = o;:}
+	| 	Contenedor:c ASIGNACION OrOp:o{: RESULT = new CodeSystem.CodeNodeAssignation(
+	new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.elementAt(CUP$parser$top-2),(Symbol) CUP$parser$stack.peek()},
+	c,o);//System.out.println(o.run());:}
+	| 	IF OrOp:o THEN Bloque:b ENDIF{:RESULT = new CodeSystem.CodeNodeIf(new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.peek()},o,b);:}
+	| 	IF OrOp:o THEN Bloque:b1 ELSE Bloque:b2 ENDIF{:
+	RESULT = new  CodeSystem.CodeNodeIfElse(
+	new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.elementAt(CUP$parser$top-2),(Symbol) CUP$parser$stack.peek()},
+	o,b1,b2
+	);
+	:};
+
+Buscar ::= BUSCAR TIPOOBJETO Num{:RESULT = new CodeSystem.CodeNodeEmpty();//TODO---------------:};
+Contenedor ::= ID:i{: RESULT = new CodeSystem.CodeNodeContainer(true,i);:}
+    | 	MI ObjAtrib:o{:RESULT = o;:}
+    | 	MI ID:i{: RESULT = new CodeSystem.CodeNodeContainer(false,i);:};
+
+Funcion ::= REALIZAR ID funcArgs ENDREALIZAR{:RESULT = new CodeSystem.CodeNodeEmpty();//TODO---------------:};
+funcArgs ::= OrOp funcArgsT{:RESULT = new CodeSystem.CodeNodeEmpty();//TODO---------------:}
+    |   {:RESULT = new CodeSystem.CodeNodeEmpty();//TODO---------------:};
+funcArgsT ::= COMMA OrOp funcArgsT{:RESULT = new CodeSystem.CodeNodeEmpty();//TODO---------------:}
+    |   {:RESULT = new CodeSystem.CodeNodeEmpty();//TODO---------------:};
+
+Objeto      ::= TIPOOBJETO:t ObjDecls:o{:RESULT = new CodeSystem.CodeNodeCreateObject(t,o);:};
+ObjDecls    ::= ObjAtribs:a ObjVars:v ObjTriggers:t{:RESULT = new CodeSystem.CodeNodeObjectBlock(a,v,t);:};
+ObjAtribs   ::= ObjAtrib:a OrOp:o ObjAtribsT:t{:
+    CodeNode assignation = new CodeSystem.CodeNodeAssignation(
+        new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.elementAt(CUP$parser$top-4),
+        (Symbol) CUP$parser$stack.elementAt(CUP$parser$top-2)}
+    ,a,o);
+    RESULT = new CodeSystem.CodeNodeBlock(assignation,t);
+:}
+    |	{:RESULT = new CodeSystem.CodeNodeEmpty();:};
+ObjAtribsT  ::= COMMA ObjAtrib:a OrOp:o ObjAtribsT:t{:
+    CodeNode assignation = new CodeSystem.CodeNodeAssignation(
+        new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.elementAt(CUP$parser$top-4),
+        (Symbol) CUP$parser$stack.elementAt(CUP$parser$top-2)}
+    ,a,o);
+    RESULT = new CodeSystem.CodeNodeBlock(assignation,t);
+:}
+    |   {:RESULT = new CodeSystem.CodeNodeEmpty();:};
+ObjAtrib ::= Pos:p {:RESULT = new CodeSystem.CodeNodeContainer(false,p);:}
+    | 	Dir:d {:RESULT = new CodeSystem.CodeNodeContainer(false,d);:}
+    | 	Vel:v {:RESULT = new CodeSystem.CodeNodeContainer(false,v);:}
+    | 	Acel:a {:RESULT = new CodeSystem.CodeNodeContainer(false,a);:};
+Pos ::= POSICION Cord:c{:RESULT= "p$"+c;:};
+Dir ::= DIRECCION Cord:c{:RESULT = "d$"+c;:};
+Cord ::= X{:RESULT = "x";:}
+    | 	Y {:RESULT = "y";:};
+Vel ::= VELOCIDAD {:RESULT = "v$";:};
+Acel ::= ACELERACION {:RESULT = "a$";:};
+
+ObjVars ::= ObjVar:v ObjVars:vs{:RESULT = new CodeSystem.CodeNodeBlock(v,vs);:}
+    |	{:RESULT = new CodeSystem.CodeNodeEmpty();:};
+ObjVar ::= MI TIPO:t ID:i{:RESULT = new CodeSystem.CodeNodeObjectDecls(t,i);:};
+ObjTriggers ::= ObjTrigger:t ObjTriggers:ts{:RESULT = new CodeSystem.CodeNodeBlock(t,ts);:}
+|	{:RESULT = new CodeSystem.CodeNodeEmpty();:};
+ObjTrigger ::= TIPOTRIGGER:t Bloque:b ENDTRIGGER{:RESULT = new CodeSystem.CodeNodeObjectTrigger(t,b);:};
+
+
+OrOp ::= OrOp:o OR AndOp:a{:RESULT = new CodeSystem.CodeNodeOR(
+    new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.elementAt(CUP$parser$top-2),(Symbol) CUP$parser$stack.peek()},
+    o,a);:}
+	| 	AndOp:a{:RESULT = a;:};
+
+AndOp ::= AndOp:a AND NotOp:n{:RESULT = new CodeSystem.CodeNodeAND(
+    new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.elementAt(CUP$parser$top-2),(Symbol) CUP$parser$stack.peek()},
+    a,n);:}
+	| 	NotOp:n{:RESULT = n;:};
+
+
+NotOp ::= NOT CompOp:c{:RESULT = new CodeSystem.CodeNodeNegation(
+    new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.peek()}
+    ,c);:}
+    |	CompOp:c {:RESULT = c;:};
+
+
+CompOp ::= SumOp:s1 IGUALDAD SumOp:s2{:RESULT = new CodeSystem.CodeNodeEquals(
+    new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.elementAt(CUP$parser$top-2),(Symbol) CUP$parser$stack.peek()},
+    s1,s2);:}
+	|	SumOp:s1 MAYORIGUAL SumOp:s2{:RESULT = new CodeSystem.CodeNodeGreaterEquals(
+	new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.elementAt(CUP$parser$top-2),(Symbol) CUP$parser$stack.peek()},
+	s1,s2);:}
+	|	SumOp:s{:RESULT = s;:};
+
+SumOp ::= SumOp:s SUMA MulOp:m{:RESULT = new CodeSystem.CodeNodeSum(
+    new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.elementAt(CUP$parser$top-2),(Symbol) CUP$parser$stack.peek()},
+    s,m);:}
+	|	SumOp:s RESTA MulOp:m{:RESULT = new CodeSystem.CodeNodeSubtraction(
+	new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.elementAt(CUP$parser$top-2),(Symbol) CUP$parser$stack.peek()},
+	s,m);:}
+	|	MulOp:m{:RESULT = m;:};
+MulOp ::=	MulOp:m MULTIPLICACION UnaOp:u{:RESULT = new CodeSystem.CodeNodeMultiplication(
+        new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.elementAt(CUP$parser$top-2),(Symbol) CUP$parser$stack.peek()},
+        m,u);:}
+	|	MulOp:m DIVISION UnaOp:u{:RESULT = new CodeSystem.CodeNodeDivision(
+	new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.elementAt(CUP$parser$top-2),(Symbol) CUP$parser$stack.peek()},
+	m,u);:}
+	|	UnaOp:u {:RESULT = u;:};
+
+UnaOp ::=	RESTA DataOp:d {:RESULT = new CodeSystem.CodeNodeUnaOp(
+        new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.peek()},
+         d);:}
+	|	DataOp:d{:RESULT = d;:};
+
+DataOp ::=
+        PARAP OrOp:o PARCIE {:RESULT = o;:}
+	|	Contenedor:c{:RESULT = new CodeSystem.CodeNodeContainerConsult(
+	new java_cup.runtime.Symbol[] {(Symbol) CUP$parser$stack.peek()}
+	,c);:}
+	|   Funcion:f{:RESULT = f;:}
+	|	Num:n{:RESULT = n;:};
+Num ::=
+		ENTERO:e{:/*System.out.println(e)*/;RESULT = new CodeSystem.CodeNodeInteger(e);:}
+	|	FLOTANTE:f{:/*System.out.println(f)*/;RESULT = new CodeSystem.CodeNodeFloat(f);:}
+	|	BOOL:b{:/*System.out.println(b)*/;RESULT = new CodeSystem.CodeNodeBool(b);:};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                 
+

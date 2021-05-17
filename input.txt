@@ -1,0 +1,108 @@
+int a
+a = 22
+
+if a == 22 then
+   crear fuego
+      posicion x 60.0,
+      posicion y 30.0,
+      direccion x 1.0,
+      direccion y 0.0,
+      velocidad 2.0
+      mi int golpes
+      mi int ticks
+      mi int maxSons
+      mi int maxWalls
+      creacion
+        mi golpes = 0
+        mi ticks = 0
+        mi maxSons = 0
+        mi maxWalls = 0
+      endTrigger
+      colision
+        mi golpes = mi golpes + 1
+        mi direccion x = -mi direccion x
+        mi direccion y = -mi direccion y
+        if mi golpes == 5 then
+            mi golpes = 0
+            float px
+            px = mi posicion x
+            float py
+            py= mi posicion y
+            if !(mi maxSons >= 15) then
+                mi maxSons = mi maxSons +1
+               crear fuego
+                  posicion x px,
+                  posicion y py,
+                  direccion x 1.0,
+                  direccion y 0.0,
+                  velocidad 1.5
+                  mi int bricks
+                  mi int ticks
+                  creacion
+                    mi bricks = 15
+                    mi ticks = 0
+                  endTrigger
+                  colision
+                    mi direccion x = -mi direccion x
+                    mi direccion y = -mi direccion y
+                  endTrigger
+                  iteracion
+                    mi ticks = mi ticks + 1
+                    mi direccion y = mi direccion y + 0.01
+                    if mi direccion y >= 0.91
+                    then
+                        mi direccion y = -1.0
+                    endIf
+                    if mi ticks == 1000 then
+                        mi ticks = 0
+                        if(mi bricks >= 0) then
+                            mi bricks = mi bricks +1
+                            float px
+                            px = mi posicion x
+                            float py
+                            py= mi posicion y
+                            crear muro
+                                posicion x px,
+                                posicion y py + 40,
+                                direccion y 1.0,
+                                velocidad 0.5
+                            endCrear
+                        endIf
+
+                    endIf
+                  endTrigger
+               endCrear
+            endIf
+
+        endIf
+      endTrigger
+      iteracion
+        mi direccion y = mi direccion y + 0.01
+        if mi direccion y >= 0.91
+        then
+            mi direccion y = -1.2
+        endIf
+        mi ticks = mi ticks + 1
+        float px
+        px = mi posicion x
+        float py
+        py= mi posicion y
+        float dx
+        dx = mi direccion x
+        float dy
+        dy = mi direccion y
+        if (mi ticks >= 300) then
+            mi ticks = 0
+            if(!(mi maxWalls >= 15)) then
+                mi maxWalls = mi maxWalls + 1
+                crear muro
+                    posicion x px-40,
+                    posicion y py,
+                    direccion x -dx,
+                    direccion y -dy
+                endCrear
+            endIf
+        endIf
+      endTrigger
+   endCrear
+endIf
